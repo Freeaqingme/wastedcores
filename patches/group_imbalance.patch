@@ -1,13 +1,13 @@
 diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
-index adff850..65bea0b 100644
+index adff850..4b3250d 100644
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
 @@ -6147,6 +6147,8 @@ struct sg_lb_stats {
  	unsigned int sum_nr_running; /* Nr tasks running in the group */
  	unsigned int idle_cpus;
  	unsigned int group_weight;
-+   unsigned long min_load;
-+   unsigned long max_load;
++	unsigned long min_load;
++	unsigned long max_load;
  	enum group_type group_type;
  	int group_no_capacity;
  #ifdef CONFIG_NUMA_BALANCING
@@ -24,10 +24,10 @@ index adff850..65bea0b 100644
  		else
  			load = source_load(i, load_idx);
  
-+      if (load < min_load)
-+         min_load = load;
-+      if(load > max_load)
-+         max_load = load;
++		if (load < min_load)
++		    min_load = load;
++		if(load > max_load)
++		    max_load = load;
 +
  		sgs->group_load += load;
  		sgs->group_util += cpu_util(i);
@@ -36,8 +36,8 @@ index adff850..65bea0b 100644
  	sgs->group_capacity = group->sgc->capacity;
  	sgs->avg_load = (sgs->group_load*SCHED_CAPACITY_SCALE) / sgs->group_capacity;
  
-+   sgs->min_load = min_load;
-+   sgs->max_load = max_load;
++	sgs->min_load = min_load;
++	sgs->max_load = max_load;
 +
  	if (sgs->sum_nr_running)
  		sgs->load_per_task = sgs->sum_weighted_load / sgs->sum_nr_running;
@@ -48,23 +48,23 @@ index adff850..65bea0b 100644
  
 -	if (sgs->group_type > busiest->group_type)
 -		return true;
-+   /* Not sure we want to keep that or not */
++	/* Not sure we want to keep that or not */
 +	/*if (sgs->group_type > busiest->group_type)
 +		return true;*/
  
 -	if (sgs->group_type < busiest->group_type)
 -		return false;
-+   if (sgs->min_load <= busiest->min_load)
-+      return true;
++	if (sgs->min_load <= busiest->min_load)
++	    return true;
  
 -	if (sgs->avg_load <= busiest->avg_load)
 -		return false;
-+   if (sgs->group_type == group_imbalanced)
-+      return true;
++	if (sgs->group_type == group_imbalanced)
++	    return true;
  
  	/* This is the busiest node in its class. */
  	if (!(env->sd->flags & SD_ASYM_PACKING))
-@@ -6778,63 +6791,14 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
+@@ -6778,63 +6791,13 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
  	local = &sds->local_stat;
  	busiest = &sds->busiest_stat;
  
@@ -76,13 +76,7 @@ index adff850..65bea0b 100644
 -		busiest->load_per_task =
 -			min(busiest->load_per_task, sds->avg_load);
 -	}
-+   if(local->min_load >= busiest->max_load) {
-+      env->imbalance = 0;
-+   }
-+   else {
-+      env->imbalance = (busiest->max_load - local->min_load) / 2;
-+   }
- 
+-
 -	/*
 -	 * In the presence of smp nice balancing, certain scenarios can have
 -	 * max load less than avg load(as we skip the groups at or below
@@ -90,7 +84,8 @@ index adff850..65bea0b 100644
 -	 */
 -	if (busiest->avg_load <= sds->avg_load ||
 -	    local->avg_load >= sds->avg_load) {
--		env->imbalance = 0;
++	if(local->min_load >= busiest->max_load) {
+		env->imbalance = 0;
 -		return fix_small_imbalance(env, sds);
 -	}
 -
@@ -105,8 +100,10 @@ index adff850..65bea0b 100644
 -			load_above_capacity -= busiest->group_capacity;
 -		else
 -			load_above_capacity = ~0UL;
--	}
--
++	} else {
++		env->imbalance = (busiest->max_load - local->min_load) / 2;
+	}
+
 -	/*
 -	 * We're trying to get all the cpus to the average_load, so we don't
 -	 * want to push ourselves above the average load, nor do we wish to
@@ -131,11 +128,11 @@ index adff850..65bea0b 100644
 -	 */
 -	if (env->imbalance < busiest->load_per_task)
 -		return fix_small_imbalance(env, sds);
-+   return;
++	return;
  }
  
  /******* find_busiest_group() helpers end here *********************/
-@@ -6896,40 +6860,14 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
+@@ -6896,39 +6859,10 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
  	    busiest->group_no_capacity)
  		goto force_balance;
  
@@ -164,7 +161,9 @@ index adff850..65bea0b 100644
 -		if ((busiest->group_type != group_overloaded) &&
 -				(local->idle_cpus <= (busiest->idle_cpus + 1)))
 -			goto out_balanced;
--	} else {
++	if(local->min_load < busiest->min_load) {
++		goto force_balance;
+	} else {
 -		/*
 -		 * In the CPU_NEWLY_IDLE, CPU_NOT_IDLE cases, use
 -		 * imbalance_pct to be conservative.
@@ -172,15 +171,7 @@ index adff850..65bea0b 100644
 -		if (100 * busiest->avg_load <=
 -				env->sd->imbalance_pct * local->avg_load)
 -			goto out_balanced;
--	}
-+   if(local->min_load < busiest->min_load)
-+   {
-+      goto force_balance;
-+   }
-+   else
-+   {
-+      goto out_balanced;
-+   }
++		goto out_balanced;
+	}
  
  force_balance:
- 	/* Looks like there is an imbalance. Compute it */

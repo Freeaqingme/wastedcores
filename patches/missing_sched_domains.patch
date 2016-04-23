@@ -1,5 +1,5 @@
 diff --git a/arch/x86/kernel/smpboot.c b/arch/x86/kernel/smpboot.c
-index 24d57f7..14fc2ee 100644
+index 24d57f7..5bc46d0 100644
 --- a/arch/x86/kernel/smpboot.c
 +++ b/arch/x86/kernel/smpboot.c
 @@ -369,6 +369,7 @@ static void primarily_use_numa_for_topology(void)
@@ -17,8 +17,8 @@ index 24d57f7..14fc2ee 100644
 +#ifndef CONFIG_NUMA
  		if (match_die(c, o) && !topology_same_node(c, o))
 +#else
-+        if (match_die(c, o) && !topology_same_node(c, o)
-+            && sched_max_numa_distance == -1)
++		if (match_die(c, o) && !topology_same_node(c, o)
++		    && sched_max_numa_distance == -1)
 +#endif
  			primarily_use_numa_for_topology();
  	}
