@@ -1,5 +1,5 @@
 diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
-index adff850..4b3250d 100644
+index adff850..5860f4e 100644
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
 @@ -6147,6 +6147,8 @@ struct sg_lb_stats {
@@ -44,8 +44,8 @@ index adff850..4b3250d 100644
  
 @@ -6512,14 +6524,15 @@ static bool update_sd_pick_busiest(struct lb_env *env,
  {
- 	struct sg_lb_stats *busiest = &sds->busiest_stat;
- 
+	struct sg_lb_stats *busiest = &sds->busiest_stat;
+
 -	if (sgs->group_type > busiest->group_type)
 -		return true;
 +	/* Not sure we want to keep that or not */
@@ -64,10 +64,16 @@ index adff850..4b3250d 100644
  
  	/* This is the busiest node in its class. */
  	if (!(env->sd->flags & SD_ASYM_PACKING))
-@@ -6778,63 +6791,13 @@ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *s
- 	local = &sds->local_stat;
- 	busiest = &sds->busiest_stat;
- 
+@@ -6772,69 +6785,18 @@ void fix_small_imbalance(struct lb_env *env, struct sd_lb_stats *sds)
+  */
+ static inline void calculate_imbalance(struct lb_env *env, struct sd_lb_stats *sds)
+ {
+-	unsigned long max_pull, load_above_capacity = ~0UL;
+	struct sg_lb_stats *local, *busiest;
+
+	local = &sds->local_stat;
+	busiest = &sds->busiest_stat;
+
 -	if (busiest->group_type == group_imbalanced) {
 -		/*
 -		 * In the group_imb case we cannot rely on group-wide averages
@@ -132,7 +138,7 @@ index adff850..4b3250d 100644
  }
  
  /******* find_busiest_group() helpers end here *********************/
-@@ -6896,39 +6859,10 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
+@@ -6896,39 +6858,10 @@ static struct sched_group *find_busiest_group(struct lb_env *env)
  	    busiest->group_no_capacity)
  		goto force_balance;
  
